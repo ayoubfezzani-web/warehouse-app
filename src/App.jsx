@@ -86,6 +86,51 @@ function LoginScreen({ onLogin, error, setError, title, hint }) {
   );
 }
 
+// Field is defined OUTSIDE WithdrawalForm so it never remounts on re-render
+function Field({ label, field, type, placeholder, multiline, value, error, onChange }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <label style={{
+        display: "block", fontFamily: "'IBM Plex Mono', monospace",
+        fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+        color: "#888", marginBottom: 6
+      }}>{label}</label>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={e => onChange(field, e.target.value)}
+          placeholder={placeholder}
+          rows={3}
+          style={{
+            width: "100%", background: "#111", border: `1.5px solid ${error ? "#e87b7b" : "#2a2a2a"}`,
+            borderRadius: 5, color: "#f0f0f0", fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 13, padding: "10px 12px", resize: "vertical", outline: "none",
+            boxSizing: "border-box", transition: "border 0.2s"
+          }}
+        />
+      ) : (
+        <input
+          type={type || "text"}
+          value={value}
+          onChange={e => onChange(field, e.target.value)}
+          placeholder={placeholder}
+          style={{
+            width: "100%", background: "#111", border: `1.5px solid ${error ? "#e87b7b" : "#2a2a2a"}`,
+            borderRadius: 5, color: "#f0f0f0", fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 13, padding: "10px 12px", outline: "none",
+            boxSizing: "border-box", transition: "border 0.2s"
+          }}
+        />
+      )}
+      {error && (
+        <span style={{ color: "#e87b7b", fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4, display: "block" }}>
+          ⚠ {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function WithdrawalForm({ onSubmit }) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
@@ -115,48 +160,6 @@ function WithdrawalForm({ onSubmit }) {
     setLoading(false);
   };
 
-  const Field = ({ label, field, type = "text", placeholder, multiline }) => (
-    <div style={{ marginBottom: 20 }}>
-      <label style={{
-        display: "block", fontFamily: "'IBM Plex Mono', monospace",
-        fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-        color: "#888", marginBottom: 6
-      }}>{label}</label>
-      {multiline ? (
-        <textarea
-          value={form[field]}
-          onChange={e => handleChange(field, e.target.value)}
-          placeholder={placeholder}
-          rows={3}
-          style={{
-            width: "100%", background: "#111", border: `1.5px solid ${errors[field] ? "#e87b7b" : "#2a2a2a"}`,
-            borderRadius: 5, color: "#f0f0f0", fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 13, padding: "10px 12px", resize: "vertical", outline: "none",
-            boxSizing: "border-box", transition: "border 0.2s"
-          }}
-        />
-      ) : (
-        <input
-          type={type}
-          value={form[field]}
-          onChange={e => handleChange(field, e.target.value)}
-          placeholder={placeholder}
-          style={{
-            width: "100%", background: "#111", border: `1.5px solid ${errors[field] ? "#e87b7b" : "#2a2a2a"}`,
-            borderRadius: 5, color: "#f0f0f0", fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 13, padding: "10px 12px", outline: "none",
-            boxSizing: "border-box", transition: "border 0.2s"
-          }}
-        />
-      )}
-      {errors[field] && (
-        <span style={{ color: "#e87b7b", fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4, display: "block" }}>
-          ⚠ {errors[field]}
-        </span>
-      )}
-    </div>
-  );
-
   return (
     <div style={{ maxWidth: 520, margin: "0 auto" }}>
       <div style={{ marginBottom: 36, borderBottom: "1px solid #222", paddingBottom: 24 }}>
@@ -181,11 +184,16 @@ function WithdrawalForm({ onSubmit }) {
         </p>
       </div>
 
-      <Field label="Your Name" field="name" placeholder="e.g. John Doe" />
-      <Field label="Part Number" field="partNumber" placeholder="e.g. CAP-100UF-25V" />
-      <Field label="Item Description" field="description" placeholder="e.g. Electrolytic Capacitor 100µF 25V" />
-      <Field label="Quantity Taken" field="quantity" type="number" placeholder="e.g. 5" />
-      <Field label="Purpose / Project" field="purpose" placeholder="e.g. PCB repair on unit #42" multiline />
+      <Field label="Your Name" field="name" placeholder="e.g. John Doe"
+        value={form.name} error={errors.name} onChange={handleChange} />
+      <Field label="Part Number" field="partNumber" placeholder="e.g. CAP-100UF-25V"
+        value={form.partNumber} error={errors.partNumber} onChange={handleChange} />
+      <Field label="Item Description" field="description" placeholder="e.g. Electrolytic Capacitor 100µF 25V"
+        value={form.description} error={errors.description} onChange={handleChange} />
+      <Field label="Quantity Taken" field="quantity" type="number" placeholder="e.g. 5"
+        value={form.quantity} error={errors.quantity} onChange={handleChange} />
+      <Field label="Purpose / Project" field="purpose" placeholder="e.g. PCB repair on unit #42"
+        multiline value={form.purpose} error={errors.purpose} onChange={handleChange} />
 
       <button
         onClick={handleSubmit}
@@ -472,7 +480,6 @@ export default function App() {
 
         <main style={{ padding: "48px 24px", maxWidth: 900, margin: "0 auto" }}>
           {view === "form" && <WithdrawalForm onSubmit={handleSubmit} />}
-
           {view === "adminLogin" && (
             <LoginScreen
               onLogin={handleAdminLogin}
@@ -482,7 +489,6 @@ export default function App() {
               hint="Enter your admin password to view and export logs."
             />
           )}
-
           {view === "admin" && <AdminView logs={logs} onClear={handleClear} />}
         </main>
       </div>
