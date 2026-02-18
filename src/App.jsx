@@ -370,18 +370,16 @@ export default function App() {
   const [userError, setUserError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      try {
-        const result = await window.storage.get("warehouse-logs");
-        if (result && result.value) setLogs(JSON.parse(result.value));
-      } catch {}
-      setLoading(false);
-    })();
+    try {
+      const saved = localStorage.getItem("warehouse-logs");
+      if (saved) setLogs(JSON.parse(saved));
+    } catch {}
+    setLoading(false);
   }, []);
 
-  const saveLogs = async (newLogs) => {
+  const saveLogs = (newLogs) => {
     try {
-      await window.storage.set("warehouse-logs", JSON.stringify(newLogs));
+      localStorage.setItem("warehouse-logs", JSON.stringify(newLogs));
     } catch {}
   };
 
@@ -389,14 +387,14 @@ export default function App() {
     const newEntry = { ...entry, id: Date.now().toString() };
     const newLogs = [newEntry, ...logs];
     setLogs(newLogs);
-    await saveLogs(newLogs);
+    saveLogs(newLogs);
     setToast({ message: "✓ Withdrawal logged successfully!", type: "success" });
   };
 
-  const handleClear = async () => {
+  const handleClear = () => {
     if (!window.confirm("Clear all log entries? This cannot be undone.")) return;
     setLogs([]);
-    await saveLogs([]);
+    saveLogs([]);
     setToast({ message: "Log cleared.", type: "success" });
   };
 
