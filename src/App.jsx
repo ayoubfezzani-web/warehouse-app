@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
+import { createClient } from '@supabase/supabase-js';
 
 const ADMIN_PASSWORD = "warehouse2024";
 const USER_PASSWORD = "team2024";
+
+// Supabase configuration
+const supabaseUrl = 'https://gwwvfbzwqnjnwxtfxurg.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3ZmYnp3cW5qbnd4dGZ4dXJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjQ5MTUsImV4cCI6MjA4NzAwMDkxNX0.EsqDSlmrprjSpEDy2JsK2RnEBj7W2aKpRmYSCmNWZ6Y';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const initialForm = {
   name: "",
@@ -86,7 +92,6 @@ function LoginScreen({ onLogin, error, setError, title, hint }) {
   );
 }
 
-// Field is defined OUTSIDE WithdrawalForm so it never remounts on re-render
 function Field({ label, field, type, placeholder, multiline, value, error, onChange }) {
   return (
     <div style={{ marginBottom: 20 }}>
@@ -155,7 +160,7 @@ function WithdrawalForm({ onSubmit }) {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
-    await onSubmit({ ...form, quantity: Number(form.quantity), timestamp: new Date().toISOString() });
+    await onSubmit({ ...form, quantity: Number(form.quantity) });
     setForm(initialForm);
     setLoading(false);
   };
@@ -213,9 +218,9 @@ function WithdrawalForm({ onSubmit }) {
   );
 }
 
-function AdminView({ logs, onClear }) {
+function AdminView({ logs, onClear, onRefresh }) {
   const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState("timestamp");
+  const [sortField, setSortField] = useState("id");
   const [sortDir, setSortDir] = useState("desc");
 
   const filtered = logs
@@ -226,7 +231,7 @@ function AdminView({ logs, onClear }) {
     )
     .sort((a, b) => {
       const av = a[sortField], bv = b[sortField];
-      if (sortField === "quantity") return sortDir === "asc" ? av - bv : bv - av;
+      if (sortField === "quantity" || sortField === "id") return sortDir === "asc" ? av - bv : bv - av;
       return sortDir === "asc" ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
     });
 
@@ -236,10 +241,9 @@ function AdminView({ logs, onClear }) {
   };
 
   const exportCSV = () => {
-    const header = ["Timestamp", "Name", "Part Number", "Description", "Quantity", "Purpose"];
+    const header = ["ID", "Name", "Part Number", "Description", "Quantity", "Purpose"];
     const rows = filtered.map(l => [
-      new Date(l.timestamp).toLocaleString(), l.name, l.partNumber,
-      l.description, l.quantity, l.purpose
+      l.id, l.name, l.part_number, l.description, l.quantity, l.purpose
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -279,7 +283,7 @@ function AdminView({ logs, onClear }) {
           Withdrawal Log
         </h1>
         <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#555", marginTop: 8 }}>
-          {logs.length} total entr{logs.length === 1 ? "y" : "ies"} recorded
+          {logs.length} total entr{logs.length === 1 ? "y" : "ies"} recorded · Synced across all devices
         </p>
       </div>
 
@@ -294,6 +298,14 @@ function AdminView({ logs, onClear }) {
             fontSize: 12, padding: "9px 12px", outline: "none"
           }}
         />
+        <button onClick={onRefresh} style={{
+          background: "#111", border: "1.5px solid #2a2a2a", borderRadius: 5,
+          color: "#aaa", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+          padding: "9px 16px", cursor: "pointer", letterSpacing: "0.08em",
+          textTransform: "uppercase", transition: "all 0.2s"
+        }}>
+          ↻ Refresh
+        </button>
         <button onClick={exportCSV} style={{
           background: "#111", border: "1.5px solid #2a2a2a", borderRadius: 5,
           color: "#aaa", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
@@ -324,9 +336,9 @@ function AdminView({ logs, onClear }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "#0d0d0d" }}>
               <tr>
-                <ColHeader label="Date / Time" field="timestamp" />
+                <ColHeader label="ID" field="id" />
                 <ColHeader label="Name" field="name" />
-                <ColHeader label="Part #" field="partNumber" />
+                <ColHeader label="Part #" field="part_number" />
                 <ColHeader label="Description" field="description" />
                 <ColHeader label="Qty" field="quantity" />
                 <ColHeader label="Purpose" field="purpose" />
@@ -338,9 +350,9 @@ function AdminView({ logs, onClear }) {
                   background: i % 2 === 0 ? "#0a0a0a" : "#080808",
                   transition: "background 0.15s"
                 }}>
-                  <td style={cell}>{new Date(log.timestamp).toLocaleString()}</td>
+                  <td style={{ ...cell, color: "#666" }}>#{log.id}</td>
                   <td style={cell}>{log.name}</td>
-                  <td style={{ ...cell, color: "#1db954", fontWeight: 600 }}>{log.partNumber}</td>
+                  <td style={{ ...cell, color: "#1db954", fontWeight: 600 }}>{log.part_number}</td>
                   <td style={cell}>{log.description}</td>
                   <td style={{ ...cell, color: "#f0c040", fontWeight: 700 }}>{log.quantity}</td>
                   <td style={{ ...cell, color: "#888" }}>{log.purpose}</td>
@@ -369,33 +381,64 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [userError, setUserError] = useState("");
 
-  useEffect(() => {
+  const fetchLogs = async () => {
     try {
-      const saved = localStorage.getItem("warehouse-logs");
-      if (saved) setLogs(JSON.parse(saved));
-    } catch {}
-    setLoading(false);
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .select('*')
+        .order('id', { ascending: false });
+      
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (err) {
+      console.error('Error fetching logs:', err);
+      setToast({ message: "Error loading logs", type: "error" });
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs().finally(() => setLoading(false));
   }, []);
 
-  const saveLogs = (newLogs) => {
-    try {
-      localStorage.setItem("warehouse-logs", JSON.stringify(newLogs));
-    } catch {}
-  };
-
   const handleSubmit = async (entry) => {
-    const newEntry = { ...entry, id: Date.now().toString() };
-    const newLogs = [newEntry, ...logs];
-    setLogs(newLogs);
-    saveLogs(newLogs);
-    setToast({ message: "✓ Withdrawal logged successfully!", type: "success" });
+    try {
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .insert([{
+          name: entry.name,
+          part_number: entry.partNumber,
+          description: entry.description,
+          quantity: entry.quantity,
+          purpose: entry.purpose
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      await fetchLogs();
+      setToast({ message: "✓ Withdrawal logged successfully!", type: "success" });
+    } catch (err) {
+      console.error('Error submitting:', err);
+      setToast({ message: "Error saving withdrawal", type: "error" });
+    }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (!window.confirm("Clear all log entries? This cannot be undone.")) return;
-    setLogs([]);
-    saveLogs([]);
-    setToast({ message: "Log cleared.", type: "success" });
+    try {
+      const { error } = await supabase
+        .from('withdrawals')
+        .delete()
+        .neq('id', 0); // Delete all rows
+
+      if (error) throw error;
+      
+      await fetchLogs();
+      setToast({ message: "Log cleared.", type: "success" });
+    } catch (err) {
+      console.error('Error clearing logs:', err);
+      setToast({ message: "Error clearing logs", type: "error" });
+    }
   };
 
   const handleUserLogin = (input) => {
@@ -411,6 +454,7 @@ export default function App() {
     if (input === ADMIN_PASSWORD) {
       setView("admin");
       setAdminError("");
+      fetchLogs(); // Refresh logs when entering admin
     } else {
       setAdminError("Incorrect password.");
     }
@@ -487,7 +531,7 @@ export default function App() {
               hint="Enter your admin password to view and export logs."
             />
           )}
-          {view === "admin" && <AdminView logs={logs} onClear={handleClear} />}
+          {view === "admin" && <AdminView logs={logs} onClear={handleClear} onRefresh={fetchLogs} />}
         </main>
       </div>
 
