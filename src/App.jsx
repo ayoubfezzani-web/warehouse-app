@@ -1,10 +1,11 @@
+
+}
 import { useState, useEffect } from "react";
 import { createClient } from '@supabase/supabase-js';
 
 const ADMIN_PASSWORD = "warehouse2024";
 const USER_PASSWORD = "team2024";
 
-// Supabase configuration
 const supabaseUrl = 'https://gwwvfbzwqnjnwxtfxurg.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3ZmYnp3cW5qbnd4dGZ4dXJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjQ5MTUsImV4cCI6MjA4NzAwMDkxNX0.EsqDSlmrprjSpEDy2JsK2RnEBj7W2aKpRmYSCmNWZ6Y';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -218,6 +219,271 @@ function WithdrawalForm({ onSubmit }) {
   );
 }
 
+function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
+  const [selectedZone, setSelectedZone] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    booked_by: "",
+    purpose: "",
+    items_stored: "",
+    booked_until: ""
+  });
+
+  const isBooked = (zoneNum) => {
+    const booking = zones.find(z => z.zone_number === zoneNum);
+    if (!booking) return false;
+    const until = new Date(booking.booked_until);
+    return until >= new Date();
+  };
+
+  const getZoneData = (zoneNum) => {
+    return zones.find(z => z.zone_number === zoneNum && new Date(z.booked_until) >= new Date());
+  };
+
+  const handleBookZone = async (zoneNum) => {
+    const errors = [];
+    if (!editForm.booked_by.trim()) errors.push("Name is required");
+    if (!editForm.purpose.trim()) errors.push("Purpose is required");
+    if (!editForm.booked_until) errors.push("End date is required");
+    
+    if (errors.length) {
+      alert(errors.join("\n"));
+      return;
+    }
+
+    await onBook(zoneNum, editForm);
+    setEditMode(false);
+    setSelectedZone(null);
+    setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
+  };
+
+  const ZoneCard = ({ num }) => {
+    const booked = isBooked(num);
+    const data = getZoneData(num);
+    const isExpanded = selectedZone === num;
+
+    return (
+      <div
+        onClick={() => setSelectedZone(isExpanded ? null : num)}
+        style={{
+          background: booked ? "#1a2a1a" : "#1a2a1a",
+          border: `2px solid ${booked ? "#e87b7b" : "#1db954"}`,
+          borderRadius: 8, padding: isExpanded ? 24 : 32,
+          cursor: "pointer", transition: "all 0.3s",
+          position: "relative"
+        }}
+      >
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: isExpanded ? 20 : 0
+        }}>
+          <div>
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24,
+              fontWeight: 700, color: "#f0f0f0", textTransform: "uppercase"
+            }}>
+              Zone {num}
+            </div>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+              color: booked ? "#e87b7b" : "#1db954", marginTop: 4,
+              textTransform: "uppercase", letterSpacing: "0.1em"
+            }}>
+              {booked ? "● Booked" : "● Vacant"}
+            </div>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}>
+            {booked && data && !editMode ? (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                    color: "#666", textTransform: "uppercase", marginBottom: 4
+                  }}>Booked By</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                    {data.booked_by}
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                    color: "#666", textTransform: "uppercase", marginBottom: 4
+                  }}>Purpose</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                    {data.purpose}
+                  </div>
+                </div>
+                {data.items_stored && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{
+                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                      color: "#666", textTransform: "uppercase", marginBottom: 4
+                    }}>Items Stored</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                      {data.items_stored}
+                    </div>
+                  </div>
+                )}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                    color: "#666", textTransform: "uppercase", marginBottom: 4
+                  }}>Booked Until</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                    {new Date(data.booked_until).toLocaleDateString()}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRelease(data.id); }}
+                    style={{
+                      flex: 1, background: "#3a1a1a", border: "1px solid #e87b7b",
+                      color: "#e87b7b", borderRadius: 4, padding: "8px",
+                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                      cursor: "pointer", textTransform: "uppercase"
+                    }}
+                  >
+                    Release Zone
+                  </button>
+                  <button
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setEditForm({
+                        booked_by: data.booked_by,
+                        purpose: data.purpose,
+                        items_stored: data.items_stored || "",
+                        booked_until: data.booked_until
+                      });
+                      setEditMode(true);
+                    }}
+                    style={{
+                      flex: 1, background: "#1a2a1a", border: "1px solid #1db954",
+                      color: "#1db954", borderRadius: 4, padding: "8px",
+                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                      cursor: "pointer", textTransform: "uppercase"
+                    }}
+                  >
+                    Edit Booking
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Field
+                  label="Your Name"
+                  field="booked_by"
+                  value={editForm.booked_by}
+                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+                  placeholder="e.g. John Doe"
+                />
+                <Field
+                  label="Purpose"
+                  field="purpose"
+                  value={editForm.purpose}
+                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+                  placeholder="e.g. PCB assembly work"
+                  multiline
+                />
+                <Field
+                  label="Items Stored (Optional)"
+                  field="items_stored"
+                  value={editForm.items_stored}
+                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+                  placeholder="e.g. 3x boards, soldering station"
+                  multiline
+                />
+                <Field
+                  label="Booked Until"
+                  field="booked_until"
+                  type="date"
+                  value={editForm.booked_until}
+                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setEditMode(false);
+                      setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
+                    }}
+                    style={{
+                      flex: 1, background: "#1a1a1a", border: "1px solid #333",
+                      color: "#888", borderRadius: 4, padding: "10px",
+                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                      cursor: "pointer", textTransform: "uppercase"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleBookZone(num); }}
+                    style={{
+                      flex: 1, background: "#1db954", border: "none",
+                      color: "#000", borderRadius: 4, padding: "10px",
+                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                      fontWeight: 700, cursor: "pointer", textTransform: "uppercase"
+                    }}
+                  >
+                    {editMode && booked ? "Update Booking" : "Book Zone"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ marginBottom: 36, borderBottom: "1px solid #222", paddingBottom: 24 }}>
+        <div style={{
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+          letterSpacing: "0.2em", color: "#555", textTransform: "uppercase", marginBottom: 8
+        }}>
+          ▸ Lab Management
+        </div>
+        <h1 style={{
+          fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42,
+          fontWeight: 700, color: "#f0f0f0", margin: 0, textTransform: "uppercase"
+        }}>
+          Commissioning Zones
+        </h1>
+        <p style={{
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 12,
+          color: "#555", marginTop: 8
+        }}>
+          Book zones for assembly work and storage
+        </p>
+      </div>
+
+      <button
+        onClick={onRefresh}
+        style={{
+          background: "#111", border: "1.5px solid #2a2a2a", borderRadius: 5,
+          color: "#aaa", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+          padding: "9px 16px", cursor: "pointer", letterSpacing: "0.08em",
+          textTransform: "uppercase", marginBottom: 20
+        }}
+      >
+        ↻ Refresh Zones
+      </button>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gap: 20
+      }}>
+        {[1, 2, 3, 4].map(num => <ZoneCard key={num} num={num} />)}
+      </div>
+    </div>
+  );
+}
+
 function AdminView({ logs, onClear, onRefresh }) {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState("id");
@@ -375,6 +641,7 @@ const cell = {
 export default function App() {
   const [view, setView] = useState("form");
   const [logs, setLogs] = useState([]);
+  const [zones, setZones] = useState([]);
   const [toast, setToast] = useState(null);
   const [adminError, setAdminError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -392,17 +659,30 @@ export default function App() {
       setLogs(data || []);
     } catch (err) {
       console.error('Error fetching logs:', err);
-      setToast({ message: "Error loading logs", type: "error" });
+    }
+  };
+
+  const fetchZones = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('commissioning_zones')
+        .select('*')
+        .order('booked_at', { ascending: false });
+      
+      if (error) throw error;
+      setZones(data || []);
+    } catch (err) {
+      console.error('Error fetching zones:', err);
     }
   };
 
   useEffect(() => {
-    fetchLogs().finally(() => setLoading(false));
+    Promise.all([fetchLogs(), fetchZones()]).finally(() => setLoading(false));
   }, []);
 
   const handleSubmit = async (entry) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('withdrawals')
         .insert([{
           name: entry.name,
@@ -410,8 +690,7 @@ export default function App() {
           description: entry.description,
           quantity: entry.quantity,
           purpose: entry.purpose
-        }])
-        .select();
+        }]);
 
       if (error) throw error;
       
@@ -423,13 +702,53 @@ export default function App() {
     }
   };
 
+  const handleBookZone = async (zoneNum, formData) => {
+    try {
+      const { error } = await supabase
+        .from('commissioning_zones')
+        .insert([{
+          zone_number: zoneNum,
+          booked_by: formData.booked_by,
+          purpose: formData.purpose,
+          items_stored: formData.items_stored,
+          booked_until: formData.booked_until
+        }]);
+
+      if (error) throw error;
+      
+      await fetchZones();
+      setToast({ message: "✓ Zone booked successfully!", type: "success" });
+    } catch (err) {
+      console.error('Error booking zone:', err);
+      setToast({ message: "Error booking zone", type: "error" });
+    }
+  };
+
+  const handleReleaseZone = async (bookingId) => {
+    if (!window.confirm("Release this zone booking?")) return;
+    try {
+      const { error } = await supabase
+        .from('commissioning_zones')
+        .delete()
+        .eq('id', bookingId);
+
+      if (error) throw error;
+      
+      await fetchZones();
+      setToast({ message: "✓ Zone released!", type: "success" });
+    } catch (err) {
+      console.error('Error releasing zone:', err);
+      setToast({ message: "Error releasing zone", type: "error" });
+    }
+  };
+
   const handleClear = async () => {
     if (!window.confirm("Clear all log entries? This cannot be undone.")) return;
     try {
       const { error } = await supabase
         .from('withdrawals')
         .delete()
-        .neq('id', 0); // Delete all rows
+        .neq('id', 0);
 
       if (error) throw error;
       
@@ -454,7 +773,7 @@ export default function App() {
     if (input === ADMIN_PASSWORD) {
       setView("admin");
       setAdminError("");
-      fetchLogs(); // Refresh logs when entering admin
+      fetchLogs();
     } else {
       setAdminError("Incorrect password.");
     }
@@ -516,12 +835,21 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <NavBtn label="Log Withdrawal" active={view === "form"} onClick={() => setView("form")} />
+            <NavBtn label="Zones" active={view === "zones"} onClick={() => { setView("zones"); fetchZones(); }} />
             <NavBtn label="Admin" active={view === "admin" || view === "adminLogin"} onClick={() => setView("adminLogin")} />
           </div>
         </nav>
 
         <main style={{ padding: "48px 24px", maxWidth: 900, margin: "0 auto" }}>
           {view === "form" && <WithdrawalForm onSubmit={handleSubmit} />}
+          {view === "zones" && (
+            <CommissioningZones 
+              zones={zones} 
+              onRefresh={fetchZones} 
+              onBook={handleBookZone}
+              onRelease={handleReleaseZone}
+            />
+          )}
           {view === "adminLogin" && (
             <LoginScreen
               onLogin={handleAdminLogin}
