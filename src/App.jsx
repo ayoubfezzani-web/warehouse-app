@@ -278,7 +278,80 @@ function BookingForm({ editForm, setEditForm, onCancel, onSubmit, isEditing }) {
   );
 }
 
-// ZoneCard is now a stable component that won't remount
+function DGSScheduleForm({ dgsForm, setDgsForm, onCancel, onSubmit, isEditing }) {
+  return (
+    <>
+      <Field
+        label="Technician Name"
+        field="technician_name"
+        value={dgsForm.technician_name}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. John Smith"
+      />
+      <Field
+        label="Company"
+        field="company"
+        value={dgsForm.company}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. Tech Services Ltd"
+      />
+      <Field
+        label="Purpose"
+        field="purpose"
+        value={dgsForm.purpose}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. Equipment calibration"
+        multiline
+      />
+      <Field
+        label="Start Date"
+        field="start_date"
+        type="date"
+        value={dgsForm.start_date}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+      />
+      <Field
+        label="End Date"
+        field="end_date"
+        type="date"
+        value={dgsForm.end_date}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+      />
+      <Field
+        label="Booked By"
+        field="booked_by"
+        value={dgsForm.booked_by}
+        onChange={(f, v) => setDgsForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="Your name"
+      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onCancel(); }}
+          style={{
+            flex: 1, background: "#1a1a1a", border: "1px solid #333",
+            color: "#888", borderRadius: 4, padding: "10px",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            cursor: "pointer", textTransform: "uppercase"
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onSubmit(); }}
+          style={{
+            flex: 1, background: "#1db954", border: "none",
+            color: "#000", borderRadius: 4, padding: "10px",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            fontWeight: 700, cursor: "pointer", textTransform: "uppercase"
+          }}
+        >
+          {isEditing ? "Update Booking" : "Add Technician"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function ZoneCard({ num, isBooked, data, isExpanded, onToggle, onRelease, onEditStart, editMode, editForm, setEditForm, onBookZone }) {
   return (
     <div
@@ -400,7 +473,185 @@ function ZoneCard({ num, isBooked, data, isExpanded, onToggle, onRelease, onEdit
   );
 }
 
-function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
+function DGSScheduleCard({ schedule, isExpanded, onToggle, onDelete, onAdd }) {
+  const [showForm, setShowForm] = useState(false);
+  const [dgsForm, setDgsForm] = useState({
+    technician_name: "",
+    company: "",
+    purpose: "",
+    start_date: "",
+    end_date: "",
+    booked_by: ""
+  });
+
+  const handleAddTechnician = () => {
+    const errors = [];
+    if (!dgsForm.technician_name.trim()) errors.push("Technician name is required");
+    if (!dgsForm.company.trim()) errors.push("Company is required");
+    if (!dgsForm.purpose.trim()) errors.push("Purpose is required");
+    if (!dgsForm.start_date) errors.push("Start date is required");
+    if (!dgsForm.end_date) errors.push("End date is required");
+    if (!dgsForm.booked_by.trim()) errors.push("Booked by is required");
+    
+    if (errors.length) {
+      alert(errors.join("\n"));
+      return;
+    }
+
+    onAdd(dgsForm);
+    setDgsForm({
+      technician_name: "",
+      company: "",
+      purpose: "",
+      start_date: "",
+      end_date: "",
+      booked_by: ""
+    });
+    setShowForm(false);
+  };
+
+  // Get upcoming and current bookings
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const activeBookings = schedule
+    .filter(s => new Date(s.end_date) >= now)
+    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+  return (
+    <div
+      onClick={onToggle}
+      style={{
+        background: "#1a2a1a",
+        border: "2px solid #4a9eff",
+        borderRadius: 8,
+        padding: isExpanded ? 24 : 32,
+        cursor: "pointer",
+        transition: "all 0.3s",
+        gridColumn: isExpanded ? "1 / -1" : "auto"
+      }}
+    >
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: isExpanded ? 20 : 0
+      }}>
+        <div>
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24,
+            fontWeight: 700, color: "#f0f0f0", textTransform: "uppercase"
+          }}>
+            DGS Schedule
+          </div>
+          <div style={{
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            color: "#4a9eff", marginTop: 4,
+            textTransform: "uppercase", letterSpacing: "0.1em"
+          }}>
+            ● {activeBookings.length} Upcoming Booking{activeBookings.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div 
+          style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!showForm ? (
+            <>
+              <button
+                onClick={() => setShowForm(true)}
+                style={{
+                  width: "100%", background: "#1db954", border: "none",
+                  color: "#000", borderRadius: 4, padding: "10px", marginBottom: 20,
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                  fontWeight: 700, cursor: "pointer", textTransform: "uppercase"
+                }}
+              >
+                + Add Technician Booking
+              </button>
+
+              {activeBookings.length === 0 ? (
+                <div style={{
+                  textAlign: "center", padding: "40px 0",
+                  fontFamily: "'IBM Plex Mono', monospace", color: "#444", fontSize: 13
+                }}>
+                  No upcoming technician bookings
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {activeBookings.map(booking => (
+                    <div
+                      key={booking.id}
+                      style={{
+                        background: "#111", border: "1px solid #2a2a2a",
+                        borderRadius: 6, padding: 16
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
+                        <div style={{
+                          fontFamily: "'IBM Plex Mono', monospace", fontSize: 14,
+                          color: "#4a9eff", fontWeight: 600
+                        }}>
+                          {booking.technician_name}
+                        </div>
+                        <button
+                          onClick={() => onDelete(booking.id)}
+                          style={{
+                            background: "transparent", border: "1px solid #e87b7b",
+                            color: "#e87b7b", borderRadius: 3, padding: "4px 8px",
+                            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                            cursor: "pointer", textTransform: "uppercase"
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      <div style={{
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                        color: "#888", marginBottom: 8
+                      }}>
+                        {booking.company}
+                      </div>
+                      <div style={{
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 12,
+                        color: "#ccc", marginBottom: 8
+                      }}>
+                        {booking.purpose}
+                      </div>
+                      <div style={{
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                        color: "#666"
+                      }}>
+                        {new Date(booking.start_date).toLocaleDateString()} → {new Date(booking.end_date).toLocaleDateString()}
+                      </div>
+                      <div style={{
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                        color: "#555", marginTop: 6
+                      }}>
+                        Booked by: {booking.booked_by}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <DGSScheduleForm
+              dgsForm={dgsForm}
+              setDgsForm={setDgsForm}
+              onCancel={() => setShowForm(false)}
+              onSubmit={handleAddTechnician}
+              isEditing={false}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommissioningZones({ zones, dgsSchedule, onRefresh, onBook, onRelease, onAddDGS, onDeleteDGS }) {
   const [selectedZone, setSelectedZone] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -411,13 +662,11 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
   });
 
   const isBooked = (zoneNum) => {
-    // Get all bookings for this zone
     const bookings = zones.filter(z => z.zone_number === zoneNum);
     if (bookings.length === 0) return false;
     
-    // Check if any booking is still active (not expired)
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Start of today
+    now.setHours(0, 0, 0, 0);
     
     return bookings.some(booking => {
       const until = new Date(booking.booked_until);
@@ -427,11 +676,9 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
   };
 
   const getZoneData = (zoneNum) => {
-    // Get all bookings for this zone
     const bookings = zones.filter(z => z.zone_number === zoneNum);
     if (bookings.length === 0) return null;
     
-    // Find the most recent active booking
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
@@ -443,7 +690,6 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
     
     if (activeBookings.length === 0) return null;
     
-    // Return the most recently created active booking
     return activeBookings.sort((a, b) => 
       new Date(b.booked_at) - new Date(a.booked_at)
     )[0];
@@ -500,7 +746,7 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
           fontFamily: "'IBM Plex Mono', monospace", fontSize: 12,
           color: "#555", marginTop: 8
         }}>
-          Book zones for assembly work and storage
+          Book zones for assembly work and schedule external technicians
         </p>
       </div>
 
@@ -543,6 +789,14 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
             onBookZone={handleBookZone}
           />
         ))}
+        
+        <DGSScheduleCard
+          schedule={dgsSchedule}
+          isExpanded={selectedZone === 'dgs'}
+          onToggle={() => setSelectedZone(selectedZone === 'dgs' ? null : 'dgs')}
+          onDelete={onDeleteDGS}
+          onAdd={onAddDGS}
+        />
       </div>
     </div>
   );
@@ -706,6 +960,7 @@ export default function App() {
   const [view, setView] = useState("form");
   const [logs, setLogs] = useState([]);
   const [zones, setZones] = useState([]);
+  const [dgsSchedule, setDgsSchedule] = useState([]);
   const [toast, setToast] = useState(null);
   const [adminError, setAdminError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -740,8 +995,22 @@ export default function App() {
     }
   };
 
+  const fetchDGSSchedule = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('dgs_schedule')
+        .select('*')
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      setDgsSchedule(data || []);
+    } catch (err) {
+      console.error('Error fetching DGS schedule:', err);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([fetchLogs(), fetchZones()]).finally(() => setLoading(false));
+    Promise.all([fetchLogs(), fetchZones(), fetchDGSSchedule()]).finally(() => setLoading(false));
   }, []);
 
   const handleSubmit = async (entry) => {
@@ -806,6 +1075,40 @@ export default function App() {
     }
   };
 
+  const handleAddDGS = async (formData) => {
+    try {
+      const { error } = await supabase
+        .from('dgs_schedule')
+        .insert([formData]);
+
+      if (error) throw error;
+      
+      await fetchDGSSchedule();
+      setToast({ message: "✓ Technician booking added!", type: "success" });
+    } catch (err) {
+      console.error('Error adding DGS booking:', err);
+      setToast({ message: "Error adding booking", type: "error" });
+    }
+  };
+
+  const handleDeleteDGS = async (bookingId) => {
+    if (!window.confirm("Delete this technician booking?")) return;
+    try {
+      const { error } = await supabase
+        .from('dgs_schedule')
+        .delete()
+        .eq('id', bookingId);
+
+      if (error) throw error;
+      
+      await fetchDGSSchedule();
+      setToast({ message: "✓ Booking deleted!", type: "success" });
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+      setToast({ message: "Error deleting booking", type: "error" });
+    }
+  };
+
   const handleClear = async () => {
     if (!window.confirm("Clear all log entries? This cannot be undone.")) return;
     try {
@@ -841,6 +1144,11 @@ export default function App() {
     } else {
       setAdminError("Incorrect password.");
     }
+  };
+
+  const handleRefreshZones = () => {
+    fetchZones();
+    fetchDGSSchedule();
   };
 
   if (loading) return (
@@ -899,7 +1207,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <NavBtn label="Log Withdrawal" active={view === "form"} onClick={() => setView("form")} />
-            <NavBtn label="Zones" active={view === "zones"} onClick={() => { setView("zones"); fetchZones(); }} />
+            <NavBtn label="Zones" active={view === "zones"} onClick={() => { setView("zones"); handleRefreshZones(); }} />
             <NavBtn label="Admin" active={view === "admin" || view === "adminLogin"} onClick={() => setView("adminLogin")} />
           </div>
         </nav>
@@ -908,10 +1216,13 @@ export default function App() {
           {view === "form" && <WithdrawalForm onSubmit={handleSubmit} />}
           {view === "zones" && (
             <CommissioningZones 
-              zones={zones} 
-              onRefresh={fetchZones} 
+              zones={zones}
+              dgsSchedule={dgsSchedule}
+              onRefresh={handleRefreshZones}
               onBook={handleBookZone}
               onRelease={handleReleaseZone}
+              onAddDGS={handleAddDGS}
+              onDeleteDGS={handleDeleteDGS}
             />
           )}
           {view === "adminLogin" && (
