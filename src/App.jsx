@@ -278,6 +278,125 @@ function BookingForm({ editForm, setEditForm, onCancel, onSubmit, isEditing }) {
   );
 }
 
+// ZoneCard is now a stable component that won't remount
+function ZoneCard({ num, isBooked, data, isExpanded, onToggle, onRelease, onEditStart, editMode, editForm, setEditForm, onBookZone }) {
+  return (
+    <div
+      onClick={onToggle}
+      style={{
+        background: "#1a2a1a",
+        border: `2px solid ${isBooked ? "#e87b7b" : "#1db954"}`,
+        borderRadius: 8, padding: isExpanded ? 24 : 32,
+        cursor: "pointer", transition: "all 0.3s",
+        position: "relative"
+      }}
+    >
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: isExpanded ? 20 : 0
+      }}>
+        <div>
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24,
+            fontWeight: 700, color: "#f0f0f0", textTransform: "uppercase"
+          }}>
+            Zone {num}
+          </div>
+          <div style={{
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            color: isBooked ? "#e87b7b" : "#1db954", marginTop: 4,
+            textTransform: "uppercase", letterSpacing: "0.1em"
+          }}>
+            {isBooked ? "● Booked" : "● Vacant"}
+          </div>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}>
+          {isBooked && data && !editMode ? (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                  color: "#666", textTransform: "uppercase", marginBottom: 4
+                }}>Booked By</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                  {data.booked_by}
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                  color: "#666", textTransform: "uppercase", marginBottom: 4
+                }}>Purpose</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                  {data.purpose}
+                </div>
+              </div>
+              {data.items_stored && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                    color: "#666", textTransform: "uppercase", marginBottom: 4
+                  }}>Items Stored</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                    {data.items_stored}
+                  </div>
+                </div>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                  color: "#666", textTransform: "uppercase", marginBottom: 4
+                }}>Booked Until</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
+                  {new Date(data.booked_until).toLocaleDateString()}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRelease(data.id); }}
+                  style={{
+                    flex: 1, background: "#3a1a1a", border: "1px solid #e87b7b",
+                    color: "#e87b7b", borderRadius: 4, padding: "8px",
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                    cursor: "pointer", textTransform: "uppercase"
+                  }}
+                >
+                  Release Zone
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEditStart(data); }}
+                  style={{
+                    flex: 1, background: "#1a2a1a", border: "1px solid #1db954",
+                    color: "#1db954", borderRadius: 4, padding: "8px",
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                    cursor: "pointer", textTransform: "uppercase"
+                  }}
+                >
+                  Edit Booking
+                </button>
+              </div>
+            </>
+          ) : (
+            <BookingForm
+              editForm={editForm}
+              setEditForm={setEditForm}
+              onCancel={(e) => {
+                if(e) e.stopPropagation();
+                onEditStart(null);
+              }}
+              onSubmit={() => onBookZone(num)}
+              isEditing={editMode && isBooked}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
   const [selectedZone, setSelectedZone] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -316,135 +435,19 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
     setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
   };
 
-  const ZoneCard = ({ num }) => {
-    const booked = isBooked(num);
-    const data = getZoneData(num);
-    const isExpanded = selectedZone === num;
-
-    return (
-      <div
-        onClick={() => setSelectedZone(isExpanded ? null : num)}
-        style={{
-          background: booked ? "#1a2a1a" : "#1a2a1a",
-          border: `2px solid ${booked ? "#e87b7b" : "#1db954"}`,
-          borderRadius: 8, padding: isExpanded ? 24 : 32,
-          cursor: "pointer", transition: "all 0.3s",
-          position: "relative"
-        }}
-      >
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          marginBottom: isExpanded ? 20 : 0
-        }}>
-          <div>
-            <div style={{
-              fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24,
-              fontWeight: 700, color: "#f0f0f0", textTransform: "uppercase"
-            }}>
-              Zone {num}
-            </div>
-            <div style={{
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-              color: booked ? "#e87b7b" : "#1db954", marginTop: 4,
-              textTransform: "uppercase", letterSpacing: "0.1em"
-            }}>
-              {booked ? "● Booked" : "● Vacant"}
-            </div>
-          </div>
-        </div>
-
-        {isExpanded && (
-          <div style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}>
-            {booked && data && !editMode ? (
-              <>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{
-                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
-                    color: "#666", textTransform: "uppercase", marginBottom: 4
-                  }}>Booked By</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
-                    {data.booked_by}
-                  </div>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{
-                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
-                    color: "#666", textTransform: "uppercase", marginBottom: 4
-                  }}>Purpose</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
-                    {data.purpose}
-                  </div>
-                </div>
-                {data.items_stored && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{
-                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
-                      color: "#666", textTransform: "uppercase", marginBottom: 4
-                    }}>Items Stored</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
-                      {data.items_stored}
-                    </div>
-                  </div>
-                )}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{
-                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
-                    color: "#666", textTransform: "uppercase", marginBottom: 4
-                  }}>Booked Until</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "#f0f0f0" }}>
-                    {new Date(data.booked_until).toLocaleDateString()}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onRelease(data.id); }}
-                    style={{
-                      flex: 1, background: "#3a1a1a", border: "1px solid #e87b7b",
-                      color: "#e87b7b", borderRadius: 4, padding: "8px",
-                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-                      cursor: "pointer", textTransform: "uppercase"
-                    }}
-                  >
-                    Release Zone
-                  </button>
-                  <button
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setEditForm({
-                        booked_by: data.booked_by,
-                        purpose: data.purpose,
-                        items_stored: data.items_stored || "",
-                        booked_until: data.booked_until
-                      });
-                      setEditMode(true);
-                    }}
-                    style={{
-                      flex: 1, background: "#1a2a1a", border: "1px solid #1db954",
-                      color: "#1db954", borderRadius: 4, padding: "8px",
-                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-                      cursor: "pointer", textTransform: "uppercase"
-                    }}
-                  >
-                    Edit Booking
-                  </button>
-                </div>
-              </>
-            ) : (
-              <BookingForm
-                editForm={editForm}
-                setEditForm={setEditForm}
-                onCancel={() => {
-                  setEditMode(false);
-                  setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
-                }}
-                onSubmit={() => handleBookZone(num)}
-                isEditing={editMode && booked}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    );
+  const handleEditStart = (data) => {
+    if (!data) {
+      setEditMode(false);
+      setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
+    } else {
+      setEditForm({
+        booked_by: data.booked_by,
+        purpose: data.purpose,
+        items_stored: data.items_stored || "",
+        booked_until: data.booked_until
+      });
+      setEditMode(true);
+    }
   };
 
   return (
@@ -487,7 +490,28 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
         gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
         gap: 20
       }}>
-        {[1, 2, 3, 4].map(num => <ZoneCard key={num} num={num} />)}
+        {[1, 2, 3, 4].map(num => (
+          <ZoneCard
+            key={num}
+            num={num}
+            isBooked={isBooked(num)}
+            data={getZoneData(num)}
+            isExpanded={selectedZone === num}
+            onToggle={() => {
+              setSelectedZone(selectedZone === num ? null : num);
+              if (selectedZone !== num) {
+                setEditMode(false);
+                setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
+              }
+            }}
+            onRelease={onRelease}
+            onEditStart={handleEditStart}
+            editMode={editMode}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            onBookZone={handleBookZone}
+          />
+        ))}
       </div>
     </div>
   );
