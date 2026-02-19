@@ -411,14 +411,42 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
   });
 
   const isBooked = (zoneNum) => {
-    const booking = zones.find(z => z.zone_number === zoneNum);
-    if (!booking) return false;
-    const until = new Date(booking.booked_until);
-    return until >= new Date();
+    // Get all bookings for this zone
+    const bookings = zones.filter(z => z.zone_number === zoneNum);
+    if (bookings.length === 0) return false;
+    
+    // Check if any booking is still active (not expired)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    return bookings.some(booking => {
+      const until = new Date(booking.booked_until);
+      until.setHours(0, 0, 0, 0);
+      return until >= now;
+    });
   };
 
   const getZoneData = (zoneNum) => {
-    return zones.find(z => z.zone_number === zoneNum && new Date(z.booked_until) >= new Date());
+    // Get all bookings for this zone
+    const bookings = zones.filter(z => z.zone_number === zoneNum);
+    if (bookings.length === 0) return null;
+    
+    // Find the most recent active booking
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    const activeBookings = bookings.filter(booking => {
+      const until = new Date(booking.booked_until);
+      until.setHours(0, 0, 0, 0);
+      return until >= now;
+    });
+    
+    if (activeBookings.length === 0) return null;
+    
+    // Return the most recently created active booking
+    return activeBookings.sort((a, b) => 
+      new Date(b.booked_at) - new Date(a.booked_at)
+    )[0];
   };
 
   const handleBookZone = async (zoneNum) => {
