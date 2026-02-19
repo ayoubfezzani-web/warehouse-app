@@ -14,6 +14,7 @@ const initialForm = {
   description: "",
   quantity: "",
   purpose: "",
+  warehouse: "adgets"
 };
 
 function Toast({ message, type, onClose }) {
@@ -190,6 +191,28 @@ function WithdrawalForm({ onSubmit }) {
 
       <Field label="Your Name" field="name" placeholder="e.g. John Doe"
         value={form.name} error={errors.name} onChange={handleChange} />
+      
+      <div style={{ marginBottom: 20 }}>
+        <label style={{
+          display: "block", fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+          color: "#888", marginBottom: 6
+        }}>Warehouse</label>
+        <select
+          value={form.warehouse}
+          onChange={e => handleChange("warehouse", e.target.value)}
+          style={{
+            width: "100%", background: "#111", border: "1.5px solid #2a2a2a",
+            borderRadius: 5, color: "#f0f0f0", fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 13, padding: "10px 12px", outline: "none",
+            boxSizing: "border-box", cursor: "pointer"
+          }}
+        >
+          <option value="adgets">Adgets Warehouse</option>
+          <option value="xero">XERO Warehouse</option>
+        </select>
+      </div>
+      
       <Field label="Part Number" field="partNumber" placeholder="e.g. CAP-100UF-25V"
         value={form.partNumber} error={errors.partNumber} onChange={handleChange} />
       <Field label="Item Description" field="description" placeholder="e.g. Electrolytic Capacitor 100µF 25V"
@@ -825,9 +848,9 @@ function AdminView({ logs, onClear, onRefresh }) {
   };
 
   const exportCSV = () => {
-    const header = ["ID", "Name", "Part Number", "Description", "Quantity", "Purpose"];
+    const header = ["ID", "Name", "Warehouse", "Part Number", "Description", "Quantity", "Purpose"];
     const rows = filtered.map(l => [
-      l.id, l.name, l.part_number, l.description, l.quantity, l.purpose
+      l.id, l.name, l.warehouse === 'adgets' ? 'Adgets' : 'XERO', l.part_number, l.description, l.quantity, l.purpose
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -922,6 +945,7 @@ function AdminView({ logs, onClear, onRefresh }) {
               <tr>
                 <ColHeader label="ID" field="id" />
                 <ColHeader label="Name" field="name" />
+                <ColHeader label="Warehouse" field="warehouse" />
                 <ColHeader label="Part #" field="part_number" />
                 <ColHeader label="Description" field="description" />
                 <ColHeader label="Qty" field="quantity" />
@@ -936,6 +960,9 @@ function AdminView({ logs, onClear, onRefresh }) {
                 }}>
                   <td style={{ ...cell, color: "#666" }}>#{log.id}</td>
                   <td style={cell}>{log.name}</td>
+                  <td style={{ ...cell, color: "#4a9eff", fontWeight: 600, textTransform: "uppercase" }}>
+                    {log.warehouse === 'adgets' ? 'Adgets' : 'XERO'}
+                  </td>
                   <td style={{ ...cell, color: "#1db954", fontWeight: 600 }}>{log.part_number}</td>
                   <td style={cell}>{log.description}</td>
                   <td style={{ ...cell, color: "#f0c040", fontWeight: 700 }}>{log.quantity}</td>
@@ -1022,7 +1049,8 @@ export default function App() {
           part_number: entry.partNumber,
           description: entry.description,
           quantity: entry.quantity,
-          purpose: entry.purpose
+          purpose: entry.purpose,
+          warehouse: entry.warehouse
         }]);
 
       if (error) throw error;
