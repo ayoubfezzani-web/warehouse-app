@@ -313,7 +313,10 @@ function ZoneCard({ num, isBooked, data, isExpanded, onToggle, onRelease, onEdit
       </div>
 
       {isExpanded && (
-        <div style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}>
+        <div 
+          style={{ marginTop: 20, borderTop: "1px solid #2a2a2a", paddingTop: 20 }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {isBooked && data && !editMode ? (
             <>
               <div style={{ marginBottom: 12 }}>
