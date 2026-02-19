@@ -208,7 +208,7 @@ function WithdrawalForm({ onSubmit }) {
             boxSizing: "border-box", cursor: "pointer"
           }}
         >
-          <option value="adgets">Adgets Warehouse</option>
+          <option value="adgets">Gadgets Warehouse</option>
           <option value="xero">XERO Warehouse</option>
         </select>
       </div>
