@@ -217,6 +217,67 @@ function WithdrawalForm({ onSubmit }) {
   );
 }
 
+function BookingForm({ editForm, setEditForm, onCancel, onSubmit, isEditing }) {
+  return (
+    <>
+      <Field
+        label="Your Name"
+        field="booked_by"
+        value={editForm.booked_by}
+        onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. John Doe"
+      />
+      <Field
+        label="Purpose"
+        field="purpose"
+        value={editForm.purpose}
+        onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. PCB assembly work"
+        multiline
+      />
+      <Field
+        label="Items Stored (Optional)"
+        field="items_stored"
+        value={editForm.items_stored}
+        onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+        placeholder="e.g. 3x boards, soldering station"
+        multiline
+      />
+      <Field
+        label="Booked Until"
+        field="booked_until"
+        type="date"
+        value={editForm.booked_until}
+        onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
+      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onCancel(); }}
+          style={{
+            flex: 1, background: "#1a1a1a", border: "1px solid #333",
+            color: "#888", borderRadius: 4, padding: "10px",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            cursor: "pointer", textTransform: "uppercase"
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onSubmit(); }}
+          style={{
+            flex: 1, background: "#1db954", border: "none",
+            color: "#000", borderRadius: 4, padding: "10px",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+            fontWeight: 700, cursor: "pointer", textTransform: "uppercase"
+          }}
+        >
+          {isEditing ? "Update Booking" : "Book Zone"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
   const [selectedZone, setSelectedZone] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -369,66 +430,16 @@ function CommissioningZones({ zones, onRefresh, onBook, onRelease }) {
                 </div>
               </>
             ) : (
-              <>
-                <Field
-                  label="Your Name"
-                  field="booked_by"
-                  value={editForm.booked_by}
-                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
-                  placeholder="e.g. John Doe"
-                />
-                <Field
-                  label="Purpose"
-                  field="purpose"
-                  value={editForm.purpose}
-                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
-                  placeholder="e.g. PCB assembly work"
-                  multiline
-                />
-                <Field
-                  label="Items Stored (Optional)"
-                  field="items_stored"
-                  value={editForm.items_stored}
-                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
-                  placeholder="e.g. 3x boards, soldering station"
-                  multiline
-                />
-                <Field
-                  label="Booked Until"
-                  field="booked_until"
-                  type="date"
-                  value={editForm.booked_until}
-                  onChange={(f, v) => setEditForm(prev => ({ ...prev, [f]: v }))}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setEditMode(false);
-                      setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
-                    }}
-                    style={{
-                      flex: 1, background: "#1a1a1a", border: "1px solid #333",
-                      color: "#888", borderRadius: 4, padding: "10px",
-                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-                      cursor: "pointer", textTransform: "uppercase"
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleBookZone(num); }}
-                    style={{
-                      flex: 1, background: "#1db954", border: "none",
-                      color: "#000", borderRadius: 4, padding: "10px",
-                      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-                      fontWeight: 700, cursor: "pointer", textTransform: "uppercase"
-                    }}
-                  >
-                    {editMode && booked ? "Update Booking" : "Book Zone"}
-                  </button>
-                </div>
-              </>
+              <BookingForm
+                editForm={editForm}
+                setEditForm={setEditForm}
+                onCancel={() => {
+                  setEditMode(false);
+                  setEditForm({ booked_by: "", purpose: "", items_stored: "", booked_until: "" });
+                }}
+                onSubmit={() => handleBookZone(num)}
+                isEditing={editMode && booked}
+              />
             )}
           </div>
         )}
